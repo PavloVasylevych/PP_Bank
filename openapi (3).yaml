@@ -237,10 +237,10 @@ paths:
           description: User not found
       security:
         - user_api_key: []
-  /user/{username}/requests:
+  /requests/{username}:
     post:
       tags:
-        - user
+        - request
       summary: Place an order for a audience
       operationId: placeOrder
       parameters:
@@ -271,19 +271,13 @@ paths:
         required: true
       security:
         - user_api_key: []
-  /user/{username}/requests/{RequestId}:
+  /requests/{RequestId}:
     get:
       tags: 
-      - user
+      - request
       summary: Find Request by ID
       operationId: getRequestById
       parameters:
-        - name: username
-          in: path
-          description: The name of tenant
-          required: true
-          schema:
-            type: string
         - name: RequestId
           in: path
           description: ID of Request that needs to be founded
@@ -309,17 +303,11 @@ paths:
         - user_api_key: []
     put:
       tags:
-        - user
+        - request
       summary: Updated request
       description: This can only be done by the logged in user.
       operationId: updateRequest
       parameters:
-        - name: username
-          in: path
-          description: The name of tenant
-          required: true
-          schema:
-            type: string
         - name: RequestId
           in: path
           description: ID of Request that needs to be founded
@@ -343,17 +331,11 @@ paths:
         - user_api_key: []
     delete:
       tags:
-        - user
+        - request
       summary: Delete request
       description: This can only be done by the logged in user.
       operationId: deleteRequest
       parameters:
-        - name: username
-          in: path
-          description: The name that needs to be deleted
-          required: true
-          schema:
-            type: string
         - name: RequestId
           in: path
           description: ID of Request that needs to be founded
