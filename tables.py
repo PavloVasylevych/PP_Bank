@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import *
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -7,7 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker, scoped_session
 
-engine = create_engine('mysql+pymysql://root:PavloVasylevych@localhost:3306/mydb')
+engine = create_engine('mysql+pymysql://root:OlehSyniuk@localhost:3306/pp_bank')
 SessionFactory = sessionmaker(bind=engine)
 Session = scoped_session(SessionFactory)
 Base=declarative_base()
@@ -43,3 +45,14 @@ class Credit(Base):
     interest_rate = Column(Integer, default=30)
     User = relationship("User")
     Bank = relationship("Bank")
+
+
+class TokenBlockList(Base):
+    __tablename__ = "token_block_list"
+
+    id = Column(INTEGER, primary_key=True)
+    jti = Column(String(36), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.now())
+
+
+metadata.create_all(engine)

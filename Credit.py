@@ -1,20 +1,26 @@
 from flask import Blueprint, Response, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 from sqlalchemy import case
 from tables import Session
 from tables import User,Credit, Bank
 from validation_schemes import CreditSchema
-from User import  auth
 
 credit = Blueprint('credit', __name__)
 
 
 session = Session()
 
-
+#Get all credits
 @credit.route('/api/v1/allcredit', methods=['GET'])
-
+@jwt_required()
 def get_credit():
+
+    username_from_identity = get_jwt_identity()
+    user = session.query(User).filter_by(username=username_from_identity).first()
+    if user.status != 'manager':
+        return {"message": "You can't get all credits if you are not a manager"}, 403
+
     # Get all credit from db
     credit = session.query(Credit)
 
@@ -31,10 +37,15 @@ def get_credit():
     return jsonify({"credit": output})
 
 
-
+#Get all users
 @credit.route('/api/v1/alluser', methods=['GET'])
-
+@jwt_required()
 def get_user():
+    username_from_identity = get_jwt_identity()
+    user = session.query(User).filter_by(username=username_from_identity).first()
+    if user.status != 'manager':
+        return {"message": "You can't get all users if you are not a manager"}, 403
+
     # Get all user from db
     user = session.query(User)
 
@@ -53,8 +64,13 @@ def get_user():
 
 # Create new credit
 @credit.route('/api/v1/Credit', methods=['POST'])
-@auth.login_required
+@jwt_required()
 def create_credit():
+    username_from_identity = get_jwt_identity()
+    user = session.query(User).filter_by(username=username_from_identity).first()
+    if user.id != request.json['id_borrower']:
+        return {"message": "You can add credit only with your id"}, 403
+
     # Get data from request body
     data = request.get_json()
 
@@ -65,36 +81,38 @@ def create_credit():
         return jsonify(err.messages), 400
 
     # Check if user exists
-    #exists = session.query(Credit.id_borrower).filter_by(id_borrower=data['id_borrower']).first()
-    #if not exists:
-       # return Response(status=404, response='User with this id was not found')
-    # Check if bank exists
-   # exists = session.query(Credit.id_bank).filter_by(id_bank=data['id_bank']).first()
-    #if not exists:
-    #    return Response(status=404, response='Bank with this id was not found')
+    exists = session.query(User).filter_by(id=data['id_borrower']).first()
+    if not exists:
+       return Response(status=404, response='User with this id was not found')
 
 
-
-    # Check if bank has enough money
-    #db_credit = session.query().filter_by(id=data['id']).first()
-    db_balance = session.query(Bank).filter_by(bank_id=data['id_bank']).first()
-    if data['loan_amount'] > db_balance.balance:
-        return Response(status=505, response='too much asked')
+    # # Check if bank has enough money
+    # db_credit = session.query(Bank).filter_by(bank_id=data['id']).first()
+    # db_balance = session.query(Bank).filter_by(bank_id=data['id_bank']).first()
+    # if data['loan_amount'] > db_balance.balance:
+    #     return Response(status=505, response='too much asked')
     # Create new credit
-    new_credit = Credit(id_borrower=data['id_borrower'], id_bank =data['id_bank'],loan_status=data['loan_status'], loan_date=data['loan_date'], loan_amount=data['loan_amount'], interest_rate=data['interest_rate'])
-    db_balance.balance = db_balance.balance - data['loan_amount']
+    new_credit = Credit(id_borrower=data['id_borrower'], loan_status=data['loan_status'], loan_date=data['loan_date'], loan_amount=data['loan_amount'], interest_rate=data['interest_rate'])
+    # db_balance.balance = db_balance.balance - data['loan_amount']
+
     # Add new credit to db
     session.add(new_credit)
-    session.add(db_balance)
+    #session.add(db_balance)
     session.commit()
 
     return Response(response='New credit was successfully created!')
 
-# Delete credit by name
 
+# Delete credit by name
 @credit.route('/api/v1/credit/<id>', methods=['DELETE'])
-@auth.login_required
+@jwt_required()
 def delete_credit(id):
+
+    username_from_identity = get_jwt_identity()
+    user = session.query(User).filter_by(username=username_from_identity).first()
+    if user.status != 'manager':
+        return {"message": "You can't delete credits if you are not a manager"}, 403
+
     # Check if credit exists
     db_user = session.query(Credit).filter_by(id=id).first()
     if not db_user:
@@ -108,8 +126,14 @@ def delete_credit(id):
 # Credit repayment
 
 @credit.route('/api/v1/CreditRepayment/<id>', methods=['PUT'])
-#@auth.login_required
+@jwt_required()
 def update_credit(id):
+
+    username_from_identity = get_jwt_identity()
+    user = session.query(User).filter_by(username=username_from_identity).first()
+    if user.status != 'manager':
+        return {"message": "You can't update credits if you are not a manager"}, 403
+
     # Get data from request body
     data = request.get_json()
 
@@ -123,9 +147,6 @@ def update_credit(id):
     db_credit = session.query(Credit).filter_by(id=id).first()
     if not db_credit:
         return Response(status=404, response='A credit with provided ID was not found.')
-
-
-
     # Change credit data
     if 'loan_amount' in data.keys():
         modifier = float(1-db_credit.interest_rate/100)

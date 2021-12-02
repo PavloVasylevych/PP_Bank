@@ -1,52 +1,49 @@
 
 from flask import Blueprint, Response, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 from flask_bcrypt import Bcrypt
 from tables import Session
 from tables import Credit, User
 from validation_schemes import UserSchema, CreditSchema
-from flask_httpauth import HTTPBasicAuth
 
 user = Blueprint('user', __name__)
 bcrypt = Bcrypt()
 
 session = Session()
 
-auth = HTTPBasicAuth()
-
-# Password Verification
-@auth.verify_password
-def verify_password(username, password):
-    try:
-        user = session.query(User).filter_by(username=username).first()
-        if user and bcrypt.check_password_hash(user.password, password):
-            return username
-    except:
-        return None
-
-
-
 
 
 # Delete user by name
 @user.route('/api/v1/User/<username>', methods=['DELETE'])
-@auth.login_required
+@jwt_required()
 def delete_user(username):
+
+    username_from_identity = get_jwt_identity()
+
     # Check if user exists
     db_user = session.query(User).filter_by(username=username).first()
     if not db_user:
         return Response(status=404, response='A user with provided name was not found.')
-    if db_user.username != auth.username():
-        return Response(status=404, response='You can delete only your account')
+
+    if username != username_from_identity:
+        return {"message": "You can't delete not your user"}, 403
 
     # Delete user
     session.delete(db_user)
     session.commit()
     return Response(response='User was deleted.')
+
 # Update user by username
 @user.route('/api/v1/User/<username>', methods=['PUT'])
-@auth.login_required
+@jwt_required()
 def update_user(username):
+
+    username_from_identity = get_jwt_identity()
+
+    if username != username_from_identity:
+        return {"message": "You can't update not your information"}, 403
+
     # Get data from request body
     data = request.get_json()
 
@@ -58,10 +55,7 @@ def update_user(username):
 
     # Check if user exists
     db_user = session.query(User).filter_by(username=username).first()
-    if not db_user:
-        return Response(status=404, response='A user with provided name was not found.')
-    if db_user.username != auth.username():
-        return Response(status=404, response='You can update only your information')
+
     # Change user data
     if 'username' in data.keys():
         db_user.username = data['username']
@@ -80,20 +74,28 @@ def update_user(username):
     # Save changes
     session.commit()
     return Response(response='User info changed')
+
+
 # Get user by name
 @user.route('/api/v1/User/<username>', methods=['GET'])
-@auth.login_required
+@jwt_required()
 def get_user(username):
+
+    username_from_identity = get_jwt_identity()
+
+    if username != username_from_identity:
+        return {"message": "You can't get not your information"}, 403
+
     # Check if user exists
     db_user = session.query(User).filter_by(username=username).first()
     if not db_user:
         return Response(status=404, response='A user with provided name was not found.')
-    if db_user.username != auth.username():
-        return Response(status=404, response='You can get only your information')
 
     # Return user data
     user_data = {'username': db_user.username, 'password': db_user.password, 'ClientName': db_user.ClientName, 'firstName': db_user.lastName, 'lastName': db_user.firstName, 'status': db_user.status}
     return jsonify({"user": user_data})
+
+
 # Register new user
 @user.route('/api/v1/User', methods=['POST'])
 def register():
@@ -110,7 +112,6 @@ def register():
     exists = session.query(User.id).filter_by(username=data['username']).first()
     if exists:
         return Response(status=400, response='User with such username already exists.')
-
 
     # Hash user's password
     hashed_password = bcrypt.generate_password_hash(data['password'])
