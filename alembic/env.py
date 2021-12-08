@@ -1,5 +1,5 @@
 from logging.config import fileConfig
-from tables import *
+from shm_metods.tables import *
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 

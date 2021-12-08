@@ -2,9 +2,9 @@ from flask import Flask, Blueprint, Response, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 #from flask_bcrypt import Bcrypt
-from tables import Session
-from tables import Credit, User,Bank
-from validation_schemes import UserSchema, CreditSchema,BalanceSchema
+from shm_metods.tables import Session
+from shm_metods.tables import Credit, User,Bank
+from shm_metods.validation_schemes import UserSchema, CreditSchema, BalanceSchema
 #from User import  auth
 
 bank = Blueprint('bank', __name__)

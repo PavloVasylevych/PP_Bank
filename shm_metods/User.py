@@ -3,9 +3,9 @@ from flask import Blueprint, Response, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 from flask_bcrypt import Bcrypt
-from tables import Session
-from tables import Credit, User
-from validation_schemes import UserSchema, CreditSchema
+from shm_metods.tables import Session
+from shm_metods.tables import Credit, User
+from shm_metods.validation_schemes import UserSchema, CreditSchema
 
 user = Blueprint('user', __name__)
 bcrypt = Bcrypt()

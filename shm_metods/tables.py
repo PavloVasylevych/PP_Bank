@@ -9,7 +9,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker, scoped_session
 
-engine = create_engine('mysql+pymysql://root:OlehSyniuk@localhost:3306/pp_bank')
+# engine = create_engine('mysql+pymysql://root:root@localhost:3306/mydb')
+# engine = create_engine('mysql+pymysql://root:OlehSyniuk@localhost:3306/pp')
+engine = create_engine('mysql+pymysql://root:qwerty@localhost:3306/pplabs')
+
+
 SessionFactory = sessionmaker(bind=engine)
 Session = scoped_session(SessionFactory)
 Base=declarative_base()
