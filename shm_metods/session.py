@@ -1,4 +1,4 @@
-from tables import *
+from shm_metods.tables import *
 
 session=sessionmaker(bind=engine)
 
