@@ -186,6 +186,9 @@ def test_user_update(get_access_token_user_manager):
     assert resp.status_code == 200
 
 
+
+
+
 def test_bank_get(get_access_token_user_manager):
     client = app.test_client()
     token1 = get_access_token_user_manager[0]['access_token']
@@ -235,3 +238,125 @@ def test_bank_update(get_access_token_user_manager):
     assert resp.status_code == 400
     resp = client.put(url, headers=headers, data=json_update_bank)
     assert resp.status_code == 200
+
+
+def test_credit_get_all_credit(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    invalid_headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    url = "http://127.0.0.1:5000/api/v1/allcredit"
+    resp = client.get(url, headers=invalid_headers)
+    assert resp.status_code == 403
+    resp = client.get(url, headers=headers)
+    assert resp.status_code == 200
+
+def test_credit_get_all_(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    invalid_headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    url = "http://127.0.0.1:5000/api/v1/alluser"
+    resp = client.get(url, headers=invalid_headers)
+    assert resp.status_code == 403
+    resp = client.get(url, headers=headers)
+    assert resp.status_code == 200
+
+
+def test_credit_create(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+
+    credit_data = {"id_borrower": 1, "id_bank": 1, "loan_status": 0, "loan_date": "2021-11-12", "loan_amount": 10000, "interest_rate": 10}
+    credit_data2 = {"username": "user7", "password": "user3", "ClientName": "name8", "firstName": "name3",
+                  "lastName": "name3", "status": "user"}
+    credit_data3 = {"id_borrower": 10, "id_bank": 1, "loan_status": 0, "loan_date": "2021-11-12", "loan_amount": 10000,
+                   "interest_rate": 10}
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    headers2 = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    url = "http://127.0.0.1:5000/api/v1/Credit"
+    resp = client.post(url, headers=headers, data=json.dumps(credit_data))
+    assert resp.status_code == 200
+    resp = client.post(url, headers=headers, data=json.dumps(credit_data2))
+    assert resp.status_code == 400
+    resp = client.post(url, headers=headers, data=json.dumps(credit_data3))
+    assert resp.status_code == 404
+    resp = client.post(url, headers=headers2, data=json.dumps(credit_data))
+    assert resp.status_code == 403
+
+
+def test_credit_update(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+
+    credit_data = {"id_borrower": 1, "id_bank": 1, "loan_status": 0, "loan_date": "2021-11-12", "loan_amount": 10000,
+                   "interest_rate": 10}
+    credit_data2 = {"username": "user7", "password": "user3", "ClientName": "name8", "firstName": "name3",
+                    "lastName": "name3", "status": "user"}
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    headers2 = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    credit = session.query(Credit).filter(Credit.loan_status != 1).first()
+    url = "http://127.0.0.1:5000/api/v1/CreditRepayment/" + str(credit.id)
+    invalid_url = "http://127.0.0.1:5000/api/v1/CreditRepayment/1000"
+    resp = client.put(url, headers=headers2, data=json.dumps(credit_data2))
+    assert resp.status_code == 400
+    resp = client.put(url, headers=headers, data=json.dumps(credit_data))
+    assert resp.status_code == 403
+    resp = client.put(invalid_url, headers=headers2, data=json.dumps(credit_data))
+    assert resp.status_code == 404
+    resp = client.put(url, headers=headers2, data=json.dumps(credit_data))
+    assert resp.status_code == 200
+
+
+def test_credit_delete(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    invalid_headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    credit = session.query(Credit).filter(Credit.loan_status != 1).first()
+    url = "http://127.0.0.1:5000/api/v1/credit/" + str(credit.id)
+    invalid_url = "http://127.0.0.1:5000/api/v1/credit/10000"
+    resp = client.delete(url, headers=invalid_headers)
+    assert resp.status_code == 403
+    resp = client.delete(invalid_url, headers=headers)
+    assert resp.status_code == 404
+    resp = client.delete(url, headers=headers)
+    assert resp.status_code == 200
+
+
+
