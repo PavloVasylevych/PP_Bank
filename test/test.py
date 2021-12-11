@@ -8,18 +8,20 @@ from main import app
 user1 = User(username="user1", ClientName="name1", firstName="name1", lastName="surname1", password="user1",
              status="user")
 user2 = User(username="user2", ClientName="name2", firstName="name2", lastName="surname2", password="user2",
-             status="user")
+             status="manager")
+
+session = s
+
 
 def test_register_user():
     client = app.test_client()
     url = "http://127.0.0.1:5000/api/v1/User"
 
-    # user_data_json = "{\n    \"firstName\": \"FirstName\",\n    \"lastName\": \"LastName\",\n    \"username\": " \
-    #                  "\"username\",\n    \"password\": \"pass\" \n} "
-    user_data = {"username": "user8", "password": "user3", "ClientName": "name8", "firstName": "name3", "lastName": "name3",
-         "status": "user"}
+    user_data = {"username": "user8", "password": "user3", "ClientName": "name8", "firstName": "name3",
+                 "lastName": "name3",
+                 "status": "user"}
     user_data2 = {"username": "user7", "password": "user3", "ClientName": "name8", "firstName": "name3",
-                 "lastName": "name3", "status": "user"}
+                  "lastName": "name3", "status": "user"}
 
     headers = {
         'Content-Type': 'application/json'
@@ -51,32 +53,24 @@ def test_login_user(create_user):
 
     login_data_json = "{\n    \"username\": \"user1\",\n   \"password\": \"user1\" \n} "
 
-    non_password = "{\n    \"username\": \"user1\" \n} "
-
-    user_data = {"username": "nouser", "password": "user1"}
-
-    non_existing_user_json = "{\n    \"username\": \"user01\",\n   \"password\": \"user1\" \n} "
+    non_existing_user_json = "{\n    \"username\": \"invalid\",\n   \"password\": \"user1\" \n} "
 
     not_matching_password_json = "{\n    \"username\": \"user1\",\n   \"password\": \"invalid\" \n} "
 
     headers = {
         'Content-Type': 'application/json'
     }
-
     resp = client.post(url, headers=headers, data=login_data_json)
+
     assert resp.status_code == 200
 
-    resp = client.post(url, headers=headers, data=non_password)
+    resp = client.post(url, headers=headers, data=non_existing_user_json)
 
-    assert resp.status_code == 401
+    assert resp.status_code == 404
 
     resp = client.post(url, headers=headers, data=not_matching_password_json)
 
-    assert resp.status_code == 401
-
-    resp = client.post(url, headers=headers, data=json.dumps(user_data))
-    assert resp.status_code == 404
-
+    assert resp.status_code == 406
 
 
 @pytest.fixture()
@@ -90,6 +84,7 @@ def login_user(create_user):
     resp = test_client.post(url, headers=headers, data=login_data_json)
     access_token_data_json = json.loads(resp.get_data(as_text=True))
     return access_token_data_json
+
 
 def test_logout_user(login_user):
     token = login_user["access_token"]
@@ -109,3 +104,134 @@ def test_logout_user(login_user):
     s.commit()
 
 
+@pytest.fixture()
+def login_user(create_user):
+    login_data_json = "{\n    \"username\": \"user1\",\n   \"password\": \"user1\" \n} "
+    test_client = app.test_client()
+    url = 'http://127.0.0.1:5000/auth/login'
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    resp = test_client.post(url, headers=headers, data=login_data_json)
+    access_token_data_json = json.loads(resp.get_data(as_text=True))
+    return access_token_data_json
+
+
+@pytest.fixture(scope="module")
+def get_access_token_user_manager():
+    client = app.test_client()
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    user1_login_data = "{\n    \"username\": " \
+                       "\"user1\",\n    \"password\": \"user1\" \n} "
+    user2_login_data = "{\n    \"username\": " \
+                       "\"user2\",\n    \"password\": \"user2\" \n} "
+    resp1 = client.post("/auth/login", headers=headers, data=user1_login_data)
+    resp2 = client.post("/auth/login", headers=headers, data=user2_login_data)
+    yield [json.loads(resp1.get_data(as_text=True)), json.loads(resp2.get_data(as_text=True))]
+
+
+def test_user_get(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    invalid_headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    user = session.query(User).filter_by(username=user1.username).first()
+    url = "http://127.0.0.1:5000/api/v1/User/" + str(user.id)
+    invalid_url = "http://127.0.0.1:5000/api/v1/User/10000"
+    resp = client.get(url, headers=headers)
+    assert resp.status_code == 200
+    resp = client.get(invalid_url, headers=headers)
+    assert resp.status_code == 404
+    resp = client.get(url, headers=invalid_headers)
+    assert resp.status_code == 403
+
+
+def test_user_update(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    invalid_headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    json_update_user = "{\n    \"ClientName\" : \"new_name1\",\n    \"firstName\": \"new_surname1\"," \
+                       "\n    \"username\": " \
+                       "\"user1\" \n  } "
+    invalid_json_update_user = "{\n    \"name\" : \"new_name1\",\n    \"surname\": \"new_surname1\"," \
+                               "\n    \"username\": " \
+                               "\"user2\" \n } "
+    url = "http://127.0.0.1:5000/api/v1/User/1"
+    invalid_url = "http://127.0.0.1:5000/api/v1/User/10000"
+    resp = client.put(invalid_url, headers=headers, data=json_update_user)
+    assert resp.status_code == 404
+    resp = client.put(url, headers=invalid_headers, data=json_update_user)
+    assert resp.status_code == 403
+    resp = client.put(url, headers=headers, data=invalid_json_update_user)
+    assert resp.status_code == 400
+    resp = client.put(url, headers=headers, data=json_update_user)
+    assert resp.status_code == 200
+
+
+def test_bank_get(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    invalid_headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    bank = session.query(Bank).filter(Bank.name != "None").first()
+    url = "http://127.0.0.1:5000/api/v1/bank/" + str(bank.name)
+    invalid_url = "http://127.0.0.1:5000/api/v1/bank/NonePrivat"
+    resp = client.get(url, headers=headers)
+    assert resp.status_code == 200
+    resp = client.get(invalid_url, headers=headers)
+    assert resp.status_code == 404
+    resp = client.get(url, headers=invalid_headers)
+    assert resp.status_code == 403
+
+
+def test_bank_update(get_access_token_user_manager):
+    client = app.test_client()
+    token1 = get_access_token_user_manager[0]['access_token']
+    token2 = get_access_token_user_manager[1]['access_token']
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token2
+    }
+    invalid_headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token1
+    }
+    json_update_bank = "{\n    \"name\" : \"Privat24\" \n} "
+    invalid_json_update_bank = "{\n    \"name\" : \"new_name1\",\n    \"surname\": \"new_surname1\"," \
+                               "\n    \"username\": " "\"user2\" \n } "
+    bank = session.query(Bank).filter(Bank.name != "None").first()
+    url = "http://127.0.0.1:5000/api/v1/bank/" + str(bank.name)
+    invalid_url = "http://127.0.0.1:5000/api/v1/bank/NonePrivat"
+    resp = client.put(invalid_url, headers=headers, data=json_update_bank)
+    assert resp.status_code == 404
+    resp = client.put(url, headers=invalid_headers, data=json_update_bank)
+    assert resp.status_code == 403
+    resp = client.put(url, headers=headers, data=invalid_json_update_bank)
+    assert resp.status_code == 400
+    resp = client.put(url, headers=headers, data=json_update_bank)
+    assert resp.status_code == 200

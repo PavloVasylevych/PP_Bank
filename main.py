@@ -10,8 +10,6 @@ from shm_metods.Credit import credit
 from shm_metods.Bank import bank
 from shm_metods.Userlogin_out import userlogin_out
 
-
-
 app = Flask(__name__)
 app.register_blueprint(user)
 app.register_blueprint(credit)
