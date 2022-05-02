@@ -1,25 +1,29 @@
 from datetime import datetime
-
 from sqlalchemy import *
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker, scoped_session
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import create_engine, Column
+from sqlalchemy import Integer, String, DateTime, ForeignKey
+from flask_jwt_extended import create_access_token
+from datetime import timedelta
+from passlib.hash import bcrypt
 
-engine = create_engine('mysql+pymysql://root:OlehSyniuk@localhost:3306/pp_bank')
+# engine = create_engine('mysql+pymysql://root:root@localhost:3306/mydb')
+# engine = create_engine('mysql+pymysql://root:OlehSyniuk@localhost:3306/pp')
+engine = create_engine('mysql+pymysql://root:qwerty@localhost:3306/pplabs')
+
 SessionFactory = sessionmaker(bind=engine)
 Session = scoped_session(SessionFactory)
-Base=declarative_base()
-metadata=Base.metadata
+Base = declarative_base()
+metadata = Base.metadata
+
 
 class Bank(Base):
-    __tablename__='Bank'
+    __tablename__ = 'Bank'
     bank_id = Column(Integer, primary_key=True)
     name = Column(String(45))
-    balance = Column(Integer, default = 570000)
+    balance = Column(Integer, default=570000)
 
 
 class User(Base):
@@ -32,6 +36,17 @@ class User(Base):
     lastName = Column(String(45))
     status = Column(String(45))
 
+    def get_token(self, expire_time=1):
+        expire_delta = timedelta(expire_time)
+        token = create_access_token(identity=self.id, expires_delta=expire_delta)
+        return token
+
+    @classmethod
+    def authenticate(cls, username, password):
+        user = Session.query(User).filter_by(username=username).first()
+        if not bcrypt.verify(password, user.password):
+            return False
+        return user
 
 
 class Credit(Base):
