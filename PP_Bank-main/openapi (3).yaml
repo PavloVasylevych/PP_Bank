@@ -378,7 +378,7 @@ components:
         password:
           type: string
           format: password
-        clientName:
+        ClientName:
           type: string
         firstName:
           type: string
